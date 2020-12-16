@@ -3,10 +3,12 @@ name = "polilith"
 version = "0.1.0"
 authors = ["Damien Carol <damien.carol@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+readme = "README.md"
+description = "Docker image quality tool"
+homepage = "https://github.com/damiencarol/polilith.git"
 
 [dependencies]
 tar = { version = "*" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
+clap = "*"
