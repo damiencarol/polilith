@@ -1,121 +1,21 @@
 use clap::{App, Arg};
-use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use tar::Archive;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct SarifLog {
-    #[serde(rename = "$schema")]
-    schema: String,
-    version: String,
-    runs: Vec<Run>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Run {
-    tool: Tool,
-    artifacts: Vec<Artifact>,
-    results: Vec<Result>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Tool {
-    driver: Driver,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Driver {
-    name: String,
-    information_uri: String,
-    full_name: String,
-    version: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Artifact {
-    location: ArtifactLocation,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ArtifactLocation {
-    uri: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Result {
-    rule_id: String,
-    kind: String,
-    level: String,
-    message: ResultMessage,
-    locations: Vec<ResultLocation>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct ResultLocation {
-    physical_location: PhysicalLocation,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct PhysicalLocation {
-    artifact_location: ArtifactLocation,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ResultMessage {
-    text: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ReportingDescriptor {
-    message: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct DockerManifest {
-    config: String,
-    repo_tags: Vec<String>,
-    layers: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct DockerConfig {
-    config: DockerConfigConfig,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct DockerConfigConfig {
-    #[serde(rename = "User")]
-    user: String,
-}
-
-fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
-    let mut manifest_data = String::new();
-    for file in ar.entries().unwrap() {
-        let mut file = file.unwrap();
-        if Path::new("manifest.json") == file.header().path().unwrap() {
-            file.read_to_string(&mut manifest_data).unwrap();
-        }
-    }
-    let manifest: Vec<DockerManifest> = serde_json::from_str(&manifest_data).unwrap();
-    manifest
-}
+mod docker;
+mod sarif;
 
 fn rule_pl007(
     ar: &mut Archive<File>,
-    manifest: &DockerManifest,
-    artifact_location: &ArtifactLocation,
-) -> Vec<Result> {
+    manifest: &docker::DockerManifest,
+    artifact_location: &sarif::ArtifactLocation,
+) -> Vec<sarif::Result> {
     let rule_id = "PL007".to_string();
-    let locations = vec![ResultLocation {
-        physical_location: PhysicalLocation {
-            artifact_location: ArtifactLocation {
+    let locations = vec![sarif::ResultLocation {
+        physical_location: sarif::PhysicalLocation {
+            artifact_location: sarif::ArtifactLocation {
                 uri: artifact_location.uri.clone(),
             },
         },
@@ -154,25 +54,25 @@ fn rule_pl007(
 
             file.read_to_string(&mut s).unwrap();
             //println!("{}", s);
-            let config: DockerConfig = serde_json::from_str(&s).unwrap();
+            let config: docker::DockerConfig = serde_json::from_str(&s).unwrap();
             println!("user detected is rule 007: {}", config.config.user);
 
             if config.config.user == "" {
-                return vec![Result {
+                return vec![sarif::Result {
                     rule_id: rule_id,
                     kind: "fail".to_string(),
                     level: "error".to_string(),
-                    message: ResultMessage {
+                    message: sarif::ResultMessage {
                         text: "Process in image run as root".to_string(),
                     },
                     locations: locations,
                 }];
             } else {
-                return vec![Result {
+                return vec![sarif::Result {
                     rule_id: rule_id,
                     kind: "pass".to_string(),
                     level: "none".to_string(),
-                    message: ResultMessage {
+                    message: sarif::ResultMessage {
                         text: "Process doesn't run as root".to_string(),
                     },
                     locations: locations,
@@ -181,32 +81,32 @@ fn rule_pl007(
         }
     }
 
-    vec![Result {
+    vec![sarif::Result {
         rule_id: rule_id,
         kind: "fail".to_string(),
         level: "error".to_string(),
-        message: ResultMessage {
+        message: sarif::ResultMessage {
             text: "Can't find configuration file from manifest".to_string(),
         },
         locations: locations,
     }]
 }
 
-fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
+fn analyze_one_archive(driver: sarif::Driver, input: &str) -> sarif::SarifLog {
     // get the manifest
     let mut ar = Archive::new(File::open(input).unwrap());
-    let manifest = get_manifest(&mut ar);
+    let manifest = docker::get_manifest(&mut ar);
 
     // create a run
-    let tool = Tool { driver: driver };
-    let mut run = Run {
+    let tool = sarif::Tool { driver: driver };
+    let mut run = sarif::Run {
         tool: tool,
         artifacts: Vec::new(),
         results: Vec::new(),
     };
     // add docker image as artifact
-    let archive_artifact = Artifact {
-        location: ArtifactLocation {
+    let archive_artifact = sarif::Artifact {
+        location: sarif::ArtifactLocation {
             uri: (&input).to_string(),
         },
     };
@@ -220,7 +120,7 @@ fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
     ));
 
     // create a report with only one run
-    let mut log = SarifLog {
+    let mut log = sarif::SarifLog {
         schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
         version: "2.1.0".to_string(),
         runs: Vec::new(),
@@ -263,7 +163,7 @@ fn main() -> std::io::Result<()> {
         .to_string();
 
     // boostrap context
-    let driver = Driver {
+    let driver = sarif::Driver {
         name: name.to_string(),
         information_uri: uri.to_string(),
         full_name: about.to_string(),

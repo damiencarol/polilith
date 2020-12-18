@@ -16,7 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: prefetch some images
+      run: docker pull busybox:1.32.0 && docker save busybox:1.32.0 -o busybox-1.32.0.tar
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Run raw tests
+      run: ./scripts/raw_test.sh
