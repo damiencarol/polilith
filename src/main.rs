@@ -51,6 +51,12 @@ struct Result {
     kind: String,
     level: String,
     message: ResultMessage,
+    locations: Vec<ResultLocation>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ResultLocation {
+    physicalLocation: ArtifactLocation
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -95,7 +101,7 @@ fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
     manifest
 }
 
-fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest) -> Vec<Result> {
+fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest, artifactLocation: &ArtifactLocation) -> Vec<Result> {
     let rule_id = "PL007".to_string();
     //let file = ar.unpack("manifest.json").unwrap();
     //let file = ar.unpack("manifest.json");//.unwrap();
@@ -141,6 +147,9 @@ fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest) -> Vec<Result> 
                     kind: "fail".to_string(),
                     level: "error".to_string(),
                     message: ResultMessage { text: "Process in image run as root".to_string() },
+                    locations: vec![
+                        ResultLocation{ physicalLocation: *artifactLocation }
+                    ]
                 }]
             } else {
                 return vec![Result {
@@ -148,6 +157,9 @@ fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest) -> Vec<Result> 
                     kind: "pass".to_string(),
                     level: "none".to_string(),
                     message: ResultMessage { text: "Process doesn't run as root".to_string() },
+                    locations: vec![
+                        ResultLocation{ physicalLocation: *artifactLocation }
+                    ]
                 }]
             }
         }
@@ -175,12 +187,13 @@ fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
         results: Vec::new(),
     };
     // add docker image as artifact
-    run.artifacts.push(Artifact {
+    let archive_artifact = Artifact {
         location: ArtifactLocation { uri: (&input).to_string() },
-    });
+    };
+    run.artifacts.push(archive_artifact);
     // test PL001 and aggregate results
     let mut ar2 = Archive::new(File::open(input).unwrap());
-    run.results.extend(rule_pl007(&mut ar2, &manifest[0]));
+    run.results.extend(rule_pl007(&mut ar2, &manifest[0], &archive_artifact.location));
 
     // create a report with only one run
     let mut log = SarifLog {
