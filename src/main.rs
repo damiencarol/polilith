@@ -51,19 +51,19 @@ struct Result {
     kind: String,
     level: String,
     message: ResultMessage,
-    locations: Vec<ResultLocation>
+    locations: Vec<ResultLocation>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ResultLocation {
-    physical_location: PhysicalLocation
+    physical_location: PhysicalLocation,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct PhysicalLocation {
-    artifact_location: ArtifactLocation
+    artifact_location: ArtifactLocation,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -81,19 +81,18 @@ struct ReportingDescriptor {
 struct DockerManifest {
     config: String,
     repo_tags: Vec<String>,
-    layers: Vec<String>
+    layers: Vec<String>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DockerConfig {
-    config: DockerConfigConfig
+    config: DockerConfigConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DockerConfigConfig {
     #[serde(rename = "User")]
-    user: String
+    user: String,
 }
 
 fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
@@ -108,15 +107,19 @@ fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
     manifest
 }
 
-fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest, artifact_location: &ArtifactLocation) -> Vec<Result> {
+fn rule_pl007(
+    ar: &mut Archive<File>,
+    manifest: &DockerManifest,
+    artifact_location: &ArtifactLocation,
+) -> Vec<Result> {
     let rule_id = "PL007".to_string();
-    let locations = vec![
-        ResultLocation{ 
-            physical_location: PhysicalLocation{
-                artifact_location: ArtifactLocation{ uri: artifact_location.uri.clone() }
-            }
-        }
-    ];
+    let locations = vec![ResultLocation {
+        physical_location: PhysicalLocation {
+            artifact_location: ArtifactLocation {
+                uri: artifact_location.uri.clone(),
+            },
+        },
+    }];
     //let file = ar.unpack("manifest.json").unwrap();
     //let file = ar.unpack("manifest.json");//.unwrap();
     // get the manifest
@@ -134,7 +137,6 @@ fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest, artifact_locati
     //     print!("{:?}", file.path());
     //     file.unpack(format!("file-{}", i)).unwrap();
     // }
-
 
     for file in ar.entries().unwrap() {
         // Make sure there wasn't an I/O error
@@ -160,17 +162,21 @@ fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest, artifact_locati
                     rule_id: rule_id,
                     kind: "fail".to_string(),
                     level: "error".to_string(),
-                    message: ResultMessage { text: "Process in image run as root".to_string() },
-                    locations: locations
-                }]
+                    message: ResultMessage {
+                        text: "Process in image run as root".to_string(),
+                    },
+                    locations: locations,
+                }];
             } else {
                 return vec![Result {
                     rule_id: rule_id,
                     kind: "pass".to_string(),
                     level: "none".to_string(),
-                    message: ResultMessage { text: "Process doesn't run as root".to_string() },
-                    locations: locations
-                }]
+                    message: ResultMessage {
+                        text: "Process doesn't run as root".to_string(),
+                    },
+                    locations: locations,
+                }];
             }
         }
     }
@@ -179,13 +185,14 @@ fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest, artifact_locati
         rule_id: rule_id,
         kind: "fail".to_string(),
         level: "error".to_string(),
-        message: ResultMessage { text: "Can't find configuration file from manifest".to_string() },
-        locations: locations
+        message: ResultMessage {
+            text: "Can't find configuration file from manifest".to_string(),
+        },
+        locations: locations,
     }]
 }
 
 fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
-    
     // get the manifest
     let mut ar = Archive::new(File::open(input).unwrap());
     let manifest = get_manifest(&mut ar);
@@ -199,12 +206,18 @@ fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
     };
     // add docker image as artifact
     let archive_artifact = Artifact {
-        location: ArtifactLocation { uri: (&input).to_string() },
+        location: ArtifactLocation {
+            uri: (&input).to_string(),
+        },
     };
     run.artifacts.push(archive_artifact);
     // test PL001 and aggregate results
     let mut ar2 = Archive::new(File::open(input).unwrap());
-    run.results.extend(rule_pl007(&mut ar2, &manifest[0], &run.artifacts[0].location));
+    run.results.extend(rule_pl007(
+        &mut ar2,
+        &manifest[0],
+        &run.artifacts[0].location,
+    ));
 
     // create a report with only one run
     let mut log = SarifLog {
@@ -222,7 +235,7 @@ fn main() -> std::io::Result<()> {
     let version = env!("CARGO_PKG_VERSION");
     let author = env!("CARGO_PKG_AUTHORS");
     let about = env!("CARGO_PKG_DESCRIPTION");
-    let uri = env!("CARGO_PKG_HOMEPAGE");
+    let uri = env!("CARGO_PKG_REPOSITORY");
     // parse command line
     let args = App::new(name)
         .version(version)
@@ -263,10 +276,12 @@ fn main() -> std::io::Result<()> {
     println!("rule\tkind\tlevel\tmessage");
     println!("----\t----\t-----\t-------");
     for result in &log.runs[0].results {
-        println!("{}\t{}\t{}\t{}", result.rule_id, result.kind, result.level, result.message.text);
+        println!(
+            "{}\t{}\t{}\t{}",
+            result.rule_id, result.kind, result.level, result.message.text
+        );
     }
     println!("");
-    
     // manage ouput
     if matches.is_present("output") {
         // export as a SARIF file
