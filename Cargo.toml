@@ -7,11 +7,10 @@ readme = "README.md"
 description = "Docker image quality tool"
 repository = "https://github.com/damiencarol/polilith.git"
 license = "Apache-2.0"
-license-file = "LICENSE"
 categories = ["command-line-utilities"]
 
 [dependencies]
-tar = { version = "*" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
-clap = "*"
+tar = "0.4.30"
+serde = { version = "1.0.118", features = ["derive"] }
+serde_json = "1.0.60"
+clap = "2.33.3"
