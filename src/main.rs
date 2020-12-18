@@ -48,6 +48,8 @@ struct ArtifactLocation {
 #[serde(rename_all = "camelCase")]
 struct Result {
     rule_id: String,
+    kind: String,
+    level: String,
     message: ResultMessage,
 }
 
@@ -61,9 +63,40 @@ struct ReportingDescriptor {
     message: String,
 }
 
-fn rule_pl001(ar: &mut Archive<File>) -> Vec<Result> {
-    let rule_id = "PL001".to_string();
-    let text = "User root pb!".to_string();
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct DockerManifest {
+    config: String,
+    repo_tags: Vec<String>,
+    layers: Vec<String>
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DockerConfig {
+    config: DockerConfigConfig
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DockerConfigConfig {
+    #[serde(rename = "User")]
+    user: String
+}
+
+fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
+    let mut manifest_data = String::new();
+    for file in ar.entries().unwrap() {
+        let mut file = file.unwrap();
+        if Path::new("manifest.json") == file.header().path().unwrap() {
+            file.read_to_string(&mut manifest_data).unwrap();
+        }
+    }
+    let manifest: Vec<DockerManifest> = serde_json::from_str(&manifest_data).unwrap();
+    manifest
+}
+
+fn rule_pl007(ar: &mut Archive<File>, manifest: &DockerManifest) -> Vec<Result> {
+    let rule_id = "PL007".to_string();
     //let file = ar.unpack("manifest.json").unwrap();
     //let file = ar.unpack("manifest.json");//.unwrap();
     // get the manifest
@@ -81,6 +114,8 @@ fn rule_pl001(ar: &mut Archive<File>) -> Vec<Result> {
     //     print!("{:?}", file.path());
     //     file.unpack(format!("file-{}", i)).unwrap();
     // }
+
+
     for file in ar.entries().unwrap() {
         // Make sure there wasn't an I/O error
         let mut file = file.unwrap();
@@ -90,23 +125,47 @@ fn rule_pl001(ar: &mut Archive<File>) -> Vec<Result> {
         //println!("{}", file.header().size().unwrap());
 
         // check if we have manifest
-        if Path::new("manifest.json") == file.header().path().unwrap() {
+        if Path::new(&manifest.config) == file.header().path().unwrap() {
+            println!("config found...");
             // files implement the Read trait
             let mut s = String::new();
 
             file.read_to_string(&mut s).unwrap();
             println!("{}", s);
+            let config: DockerConfig = serde_json::from_str(&s).unwrap();
+            println!("{}", config.config.user);
+
+            if config.config.user == "" {
+                return vec![Result {
+                    rule_id: rule_id,
+                    kind: "fail".to_string(),
+                    level: "error".to_string(),
+                    message: ResultMessage { text: "Process in image run as root".to_string() },
+                }]
+            } else {
+                return vec![Result {
+                    rule_id: rule_id,
+                    kind: "pass".to_string(),
+                    level: "none".to_string(),
+                    message: ResultMessage { text: "Process doesn't run as root".to_string() },
+                }]
+            }
         }
     }
 
     vec![Result {
         rule_id: rule_id,
-        message: ResultMessage { text: text },
+        kind: "fail".to_string(),
+        level: "error".to_string(),
+        message: ResultMessage { text: "Can't find configuration file from manifest".to_string() },
     }]
 }
 
 fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
+    
+    // get the manifest
     let mut ar = Archive::new(File::open(input).unwrap());
+    let manifest = get_manifest(&mut ar);
 
     // create a run
     let tool = Tool { driver: driver };
@@ -120,7 +179,8 @@ fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
         location: ArtifactLocation { uri: (&input).to_string() },
     });
     // test PL001 and aggregate results
-    run.results.extend(rule_pl001(&mut ar));
+    let mut ar2 = Archive::new(File::open(input).unwrap());
+    run.results.extend(rule_pl007(&mut ar2, &manifest[0]));
 
     // create a report with only one run
     let mut log = SarifLog {
@@ -136,7 +196,7 @@ fn analyze_one_archive(driver: Driver, input: &str) -> SarifLog {
 fn main() -> std::io::Result<()> {
     let name = env!("CARGO_PKG_NAME");
     let version = env!("CARGO_PKG_VERSION");
-    let author = "Damien Carol <damien.carol@gmail.com>";
+    let author = env!("CARGO_PKG_AUTHORS");
     let about = env!("CARGO_PKG_DESCRIPTION");
     let uri = env!("CARGO_PKG_HOMEPAGE");
     // parse command line
@@ -175,11 +235,20 @@ fn main() -> std::io::Result<()> {
     // do one run
     println!("Analysing file {}...", myfile);
     let log = analyze_one_archive(driver, &myfile);
-
+    // do some pretty print
+    println!("rule\tkind\tlevel\tmessage");
+    println!("----\t----\t-----\t-------");
+    for result in &log.runs[0].results {
+        println!("{}\t{}\t{}\t{}", result.rule_id, result.kind, result.level, result.message.text);
+    }
+    println!("");
+    
     // manage ouput
     if matches.is_present("output") {
         // export as a SARIF file
-        let mut file = File::create(matches.value_of("output").unwrap())?;
+        let output = matches.value_of("output").unwrap();
+        println!("generating report file {}...", output);
+        let mut file = File::create(output)?;
         let json = serde_json::to_string_pretty(&log).unwrap();
         file.write_all(json.as_bytes())?;
     }

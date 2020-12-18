@@ -1,21 +1,25 @@
 # Polilith
 
-Polilith is a tool to detect some common misconfiguration of Docker images
+Polilith is a SAST tool to detect some common misconfiguration of Docker images
 
-## Rules
+## Installation
 
-### PL001
-
-Root in a container is the same root as on the host machine, but restricted by the docker daemon configuration. No matter the limitations, if an actor breaks out of the container he will still be able to find a way to get full access to the host.
-
-Of course this is not ideal and your threat model can’t ignore the risk posed by running as root.
-
-As such is best to always specify a user:
+## Command Line Options
 
 ```
-USER hopefullynotroot
+$ polilith -h
+polilith 0.1.0
+Damien Carol <damien.carol@gmail.com>
+Docker image quality tool
+
+USAGE:
+    polilith [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+    -f, --file <file>     Docker image file
+    -o, --out <output>    Report file
 ```
-
-Note that explicitly setting a user in the Dockerfile is just one layer of defence and won’t solve the whole running as root problem.
-
-Instead one can — and should — adopt a defence in depth approach and mitigate further across the whole stack: strictly configure the docker daemon or use a rootless container solution, restrict the runtime configuration (prohibit --privileged if possible, etc), and so on.
