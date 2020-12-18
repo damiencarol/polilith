@@ -5,7 +5,10 @@ authors = ["Damien Carol <damien.carol@gmail.com>"]
 edition = "2018"
 readme = "README.md"
 description = "Docker image quality tool"
-homepage = "https://github.com/damiencarol/polilith.git"
+repository = "https://github.com/damiencarol/polilith.git"
+license = "Apache-2.0"
+license-file = "LICENSE"
+categories = ["command-line-utilities"]
 
 [dependencies]
 tar = { version = "*" }
