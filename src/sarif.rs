@@ -27,6 +27,7 @@ pub(crate) struct Driver {
     pub information_uri: String,
     pub full_name: String,
     pub version: String,
+    pub rules: Vec<ReportingDescriptor>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -67,6 +68,16 @@ pub(crate) struct ResultMessage {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ReportingDescriptor {
-    pub message: String,
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub short_description: std::option::Option<MultiformatMessageString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub full_description: std::option::Option<MultiformatMessageString>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct MultiformatMessageString {
+    pub text: String,
 }
