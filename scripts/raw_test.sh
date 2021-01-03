@@ -46,6 +46,7 @@ cat > test_images/pl001/vulnerable/Dockerfile <<EOF
 FROM scratch
 ENV token=vEryS3cr3t
 COPY test /app/file
+USER test
 ENTRYPOINT echo "test"
 EOF
 cd test_images/pl001/vulnerable/

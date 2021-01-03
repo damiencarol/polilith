@@ -111,10 +111,11 @@ impl Rule for RuleEnv {
             "token",
             "tkn"];
         for var in &config.config.env {
-            println!("detecting {}", var);
+            let dc: Vec<&str> = var.split("=").collect();
+            println!("analyzing environment variable {:#?}...", dc[0]);
             for it in suspicious_tokens.iter() {
-                if var.contains(it) {
-                    self.suspicious_envs.push(var.to_string());
+                if dc[0].contains(it) {
+                    self.suspicious_envs.push(dc[0].to_string());
                 }
             }
         }
@@ -143,7 +144,7 @@ Unfortunately using ENV to store tokens, password or credentials is a bad practi
                     kind: "fail".to_string(),
                     level: "error".to_string(),
                     message: ResultMessage {
-                        text: "Potential secret in ENV key found".to_string(),
+                        text: "Potential secret in ENV key found: '{0}'".to_string(),
                         arguments: Some(vec![sus.to_string()]),
                     },
                     locations: vec![ResultLocation{

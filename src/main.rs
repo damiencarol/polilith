@@ -7,6 +7,17 @@ mod docker;
 mod rules;
 mod sarif;
 
+fn generate_message(message: &sarif::ResultMessage) -> String {
+    if None != message.arguments {
+        let mut res = message.text.to_string();
+        for args in &message.arguments {
+            res = res.replace("{0}", &args[0])
+        }
+        return res
+    }
+    message.text.to_string()
+}
+
 fn main() -> std::io::Result<()> {
     let name = env!("CARGO_PKG_NAME");
     let version = env!("CARGO_PKG_VERSION");
@@ -53,9 +64,10 @@ fn main() -> std::io::Result<()> {
     println!("rule\tkind\tlevel\tmessage");
     println!("----\t----\t-----\t-------");
     for result in &log.runs[0].results {
+        let generated_message = generate_message(&result.message);
         println!(
             "{}\t{}\t{}\t{}",
-            result.rule_id, result.kind, result.level, result.message.text
+            result.rule_id, result.kind, result.level, generated_message
         );
     }
     println!("");
