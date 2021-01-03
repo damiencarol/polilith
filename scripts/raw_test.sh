@@ -37,3 +37,22 @@ cargo run -- -f testPL007vulnerable.tar -o report-testPL007vulnerable.sarif || t
 # check result of the rule
 RES=$( cat report-testPL007vulnerable.sarif | jq -r '.runs[0].results[] | select(.ruleId | contains("PL007")) | .kind ' )
 [ "fail" == "$RES" ]
+
+
+echo "*** PL001 image vulnerable ***"
+mkdir -p test_images/pl001/vulnerable
+echo "some data" > test_images/pl001/vulnerable/test
+cat > test_images/pl001/vulnerable/Dockerfile <<EOF
+FROM scratch
+ENV token=vEryS3cr3t
+COPY test /app/file
+ENTRYPOINT echo "test"
+EOF
+cd test_images/pl001/vulnerable/
+docker build -t "pl001vulnerable:latest" -f Dockerfile .
+cd ../../..
+docker save "pl001vulnerable:latest" -o testPL001vulnerable.tar
+cargo run -- -f testPL007vulnerable.tar -o report-testPL001vulnerable.sarif || true
+# check result of the rule
+RES=$( cat report-testPL001vulnerable.sarif | jq -r '.runs[0].results[] | select(.ruleId | contains("PL001")) | .kind ' )
+[ "fail" == "$RES" ]

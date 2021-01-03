@@ -65,6 +65,8 @@ pub(crate) struct PhysicalLocation {
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct ResultMessage {
     pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: std::option::Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

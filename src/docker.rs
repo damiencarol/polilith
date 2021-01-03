@@ -18,9 +18,10 @@ pub(crate) struct DockerConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub(crate) struct DockerConfigConfig {
-    #[serde(rename = "User")]
     pub user: String,
+    pub env: Vec<String>,
 }
 
 pub(crate) fn get_manifest(ar: &mut Archive<File>) -> Vec<DockerManifest> {
