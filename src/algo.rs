@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use std::path::PathBuf;
 use tar::Archive;
 
 // use polilith::docker;
@@ -76,9 +77,9 @@ fn rule_pl007(
     res
 }
 
-pub(crate) fn analyze_one_archive(infos: ToolInfo, input: &str) -> SarifLog {
+pub(crate) fn analyze_one_archive(infos: ToolInfo, input: PathBuf) -> SarifLog {
     // get the manifest
-    let mut ar = Archive::new(File::open(input).unwrap());
+    let mut ar = Archive::new(File::open(&input).unwrap());
     let manifest = get_manifest(&mut ar);
 
     // add some rules
@@ -92,15 +93,17 @@ pub(crate) fn analyze_one_archive(infos: ToolInfo, input: &str) -> SarifLog {
             information_uri: infos.information_uri,
             full_name: infos.full_name,
             version: infos.version,
-            rules: vec![rule1.get_reporting_descriptor(),
-                        rule7.get_reporting_descriptor()],
+            rules: vec![
+                rule1.get_reporting_descriptor(),
+                rule7.get_reporting_descriptor(),
+            ],
         },
     };
 
     // add docker image as artifact
     let archive_artifact = Artifact {
         location: ArtifactLocation {
-            uri: (&input).to_string(),
+            uri: (&input).display().to_string(),
         },
     };
 
@@ -126,7 +129,7 @@ pub(crate) fn analyze_one_archive(infos: ToolInfo, input: &str) -> SarifLog {
         &mut rule1,
         &mut rule7,
     );
-    
+
     let run = Run {
         tool: tool,
         artifacts: vec![archive_artifact],

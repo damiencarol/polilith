@@ -19,7 +19,9 @@ pub struct RuleUserRoot {
 
 impl Rule for RuleUserRoot {
     fn new() -> RuleUserRoot {
-        RuleUserRoot { user_detected: None }
+        RuleUserRoot {
+            user_detected: None,
+        }
     }
 
     fn get_id(&self) -> String {
@@ -53,13 +55,13 @@ impl Rule for RuleUserRoot {
                     text: "Process in image run as root".to_string(),
                     arguments: None,
                 },
-                locations: vec![ResultLocation{
-                    physical_location: PhysicalLocation{
+                locations: vec![ResultLocation {
+                    physical_location: PhysicalLocation {
                         artifact_location: ArtifactLocation {
-                                uri: location.uri.clone(),
-                            }
-                        }
-                    }],
+                            uri: location.uri.clone(),
+                        },
+                    },
+                }],
             }];
         } else {
             return vec![Result {
@@ -70,27 +72,27 @@ impl Rule for RuleUserRoot {
                     text: "Process doesn't run as root".to_string(),
                     arguments: None,
                 },
-                locations: vec![ResultLocation{
-                    physical_location: PhysicalLocation{
+                locations: vec![ResultLocation {
+                    physical_location: PhysicalLocation {
                         artifact_location: ArtifactLocation {
                             uri: location.uri.clone(),
-                        }
-                    }
+                        },
+                    },
                 }],
             }];
         }
     }
 }
 
-
 pub struct RuleEnv {
     suspicious_envs: Vec<String>,
 }
 
 impl Rule for RuleEnv {
-
     fn new() -> RuleEnv {
-        RuleEnv { suspicious_envs: Vec::new() }
+        RuleEnv {
+            suspicious_envs: Vec::new(),
+        }
     }
 
     fn get_id(&self) -> String {
@@ -99,17 +101,9 @@ impl Rule for RuleEnv {
 
     fn emit_config(&mut self, config: &DockerConfig) {
         let suspicious_tokens = [
-            "passwd",
-            "password",
-            "pass",
-        //  "pwd", can't use this one   
-            "secret",
-            "key",
-            "access",
-            "api_key",
-            "apikey",
-            "token",
-            "tkn"];
+            "passwd", "password", "pass", //  "pwd", can't use this one
+            "secret", "key", "access", "api_key", "apikey", "token", "tkn",
+        ];
         for var in &config.config.env {
             let dc: Vec<&str> = var.split("=").collect();
             println!("analyzing environment variable {:#?}...", dc[0]);
@@ -147,13 +141,13 @@ Unfortunately using ENV to store tokens, password or credentials is a bad practi
                         text: "Potential secret in ENV key found: '{0}'".to_string(),
                         arguments: Some(vec![sus.to_string()]),
                     },
-                    locations: vec![ResultLocation{
-                        physical_location: PhysicalLocation{
+                    locations: vec![ResultLocation {
+                        physical_location: PhysicalLocation {
                             artifact_location: ArtifactLocation {
-                                    uri: location.uri.clone(),
-                                }
-                            }
-                        }],
+                                uri: location.uri.clone(),
+                            },
+                        },
+                    }],
                 });
             }
             return res;
@@ -166,12 +160,12 @@ Unfortunately using ENV to store tokens, password or credentials is a bad practi
                     text: "No suspicious environment variables found".to_string(),
                     arguments: None,
                 },
-                locations: vec![ResultLocation{
-                    physical_location: PhysicalLocation{
+                locations: vec![ResultLocation {
+                    physical_location: PhysicalLocation {
                         artifact_location: ArtifactLocation {
                             uri: location.uri.clone(),
-                        }
-                    }
+                        },
+                    },
                 }],
             }];
         }
