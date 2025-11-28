@@ -1,56 +1,50 @@
-use clap::{App, Arg};
+
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::Error;
+use std::path::Path;
+use std::path::PathBuf;
+
+use clap::{Parser};
 
 mod algo;
 mod docker;
 mod rules;
 mod sarif;
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Docker image file to scan
+    #[arg(short, long, default_value = "FILE.tar")]
+    file: Option<PathBuf>,
+
+    /// Report file path
+    #[arg(short, long, default_value = "FILE.tar.sarif")]
+    output: Option<PathBuf>,
+}
+
 fn generate_message(message: &sarif::ResultMessage) -> String {
     if None != message.arguments {
         let mut res = message.text.to_string();
-        for args in &message.arguments {
+        while let Some(args) = &message.arguments {
             res = res.replace("{0}", &args[0])
         }
-        return res
+        return res;
     }
     message.text.to_string()
 }
 
-fn main() -> std::io::Result<()> {
-    let name = env!("CARGO_PKG_NAME");
-    let version = env!("CARGO_PKG_VERSION");
-    let author = env!("CARGO_PKG_AUTHORS");
-    let about = env!("CARGO_PKG_DESCRIPTION");
-    let uri = env!("CARGO_PKG_REPOSITORY");
-    // parse command line
-    let args = App::new(name)
-        .version(version)
-        .author(author)
-        .about(about)
-        .arg(
-            Arg::with_name("file")
-                .short("f")
-                .long("file")
-                .takes_value(true)
-                .help("Docker image file"),
-        )
-        .arg(
-            Arg::with_name("output")
-                .short("o")
-                .long("out")
-                .takes_value(true)
-                .help("Report file"),
-        );
-    let matches = args.get_matches();
-
-    let myfile = matches
-        .value_of("file")
-        .unwrap_or("busybox-latest.tar")
-        .to_string();
+fn main() -> Result<(), Error> {
+    let cli = Cli::parse();
+    let myfile = cli.file.unwrap();
 
     // boostrap context
+    let name = env!("CARGO_PKG_NAME");
+    let version = env!("CARGO_PKG_VERSION");
+    //let author = env!("CARGO_PKG_AUTHORS");
+    let about = env!("CARGO_PKG_DESCRIPTION");
+    let uri = env!("CARGO_PKG_REPOSITORY");
     let driver = algo::ToolInfo {
         name: name.to_string(),
         information_uri: uri.to_string(),
@@ -58,8 +52,11 @@ fn main() -> std::io::Result<()> {
         version: version.to_string(),
     };
     // do one run
-    println!("Analysing file {}...", myfile);
-    let log = algo::analyze_one_archive(driver, &myfile);
+    println!("Analysing file {}...", myfile.display());
+    if !Path::new(&myfile).exists() {
+        panic!("Problem opening the file: {}", myfile.display());
+    }
+    let log = algo::analyze_one_archive(driver, myfile);
     // do some pretty print
     println!("rule\tkind\tlevel\tmessage");
     println!("----\t----\t-----\t-------");
@@ -71,14 +68,13 @@ fn main() -> std::io::Result<()> {
         );
     }
     println!("");
-    // manage ouput
-    if matches.is_present("output") {
-        // export as a SARIF file
-        let output = matches.value_of("output").unwrap();
-        println!("generating report file {}...", output);
-        let mut file = File::create(output)?;
-        let json = serde_json::to_string_pretty(&log).unwrap();
-        file.write_all(json.as_bytes())?;
-    }
+
+    // export as a SARIF file
+    let output = cli.output.unwrap();
+    println!("generating report file {}...", output.display());
+    let mut file = File::create(output)?;
+    let json = serde_json::to_string_pretty(&log).unwrap();
+    file.write_all(json.as_bytes())?;
+
     Ok(())
 }

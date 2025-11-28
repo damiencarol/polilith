@@ -73,6 +73,7 @@ pub(crate) struct ResultMessage {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ReportingDescriptor {
     pub id: String,
+    pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub short_description: std::option::Option<MultiformatMessageString>,
     #[serde(skip_serializing_if = "Option::is_none")]

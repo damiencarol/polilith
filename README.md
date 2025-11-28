@@ -23,3 +23,17 @@ OPTIONS:
     -f, --file <file>     Docker image file
     -o, --out <output>    Report file
 ```
+
+## Getting started
+
+### Scan an image
+
+1. get the image as an archive.
+```bash
+docker pull "python:3.6"
+docker save "python:3.6" -o python_3.6.tar
+```
+2. scan it
+```bash
+cargo run -- -f python_3.6.tar -o report-python_3.6.tar.sarif
+```
