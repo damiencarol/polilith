@@ -35,6 +35,7 @@ impl Rule for RuleUserRoot {
     fn get_reporting_descriptor(&self) -> ReportingDescriptor {
         ReportingDescriptor{
             id: self.get_id(),
+            name: "DontRunAsRoot".to_string(),
             short_description: Some(MultiformatMessageString{
                 text: "Do not run as root".to_string()
             }),
@@ -118,6 +119,7 @@ impl Rule for RuleEnv {
     fn get_reporting_descriptor(&self) -> ReportingDescriptor {
         ReportingDescriptor{
             id: self.get_id(),
+            name: "LeakSecretEnvVar".to_string(),
             short_description: Some(MultiformatMessageString{
                 text: "Do not store secrets in environment variables".to_string()
             }),

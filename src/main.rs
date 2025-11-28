@@ -16,11 +16,11 @@ mod sarif;
 #[command(version, about, long_about = None)]
 struct Cli {
     /// Docker image file to scan
-    #[arg(short, long, value_name = "FILE.tar")]
+    #[arg(short, long, default_value = "FILE.tar")]
     file: Option<PathBuf>,
 
     /// Report file path
-    #[arg(short, long, value_name = "FILE.tar.sarif")]
+    #[arg(short, long, default_value = "FILE.tar.sarif")]
     output: Option<PathBuf>,
 }
 
