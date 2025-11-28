@@ -20,7 +20,7 @@ pub(crate) struct DockerConfig {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub(crate) struct DockerConfigConfig {
-    pub user: String,
+    pub user: Option<String>,
     pub env: Vec<String>,
 }
 

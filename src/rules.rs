@@ -29,7 +29,7 @@ impl Rule for RuleUserRoot {
     }
 
     fn emit_config(&mut self, config: &DockerConfig) {
-        self.user_detected = Some(config.config.user.clone())
+        self.user_detected = config.config.user.clone();
     }
 
     fn get_reporting_descriptor(&self) -> ReportingDescriptor {
@@ -46,8 +46,7 @@ impl Rule for RuleUserRoot {
     }
 
     fn get_result(&self, location: &ArtifactLocation) -> Vec<Result> {
-        let dd = self.user_detected.as_ref().unwrap();
-        if dd.len() == 0 {
+        if !self.user_detected.is_some() {
             return vec![Result {
                 rule_id: "PL007".to_string(),
                 kind: "fail".to_string(),
